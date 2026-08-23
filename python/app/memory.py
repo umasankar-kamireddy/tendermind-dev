@@ -6,13 +6,34 @@ memories saved by either implementation are visible to both."""
 from __future__ import annotations
 
 import json
+import os
 import re
+import tempfile
 import time
 import uuid
 from pathlib import Path
 from typing import Any
 
-MEMORY_DIR = Path(__file__).resolve().parents[2] / "memory" / "agents"
+
+def _memory_dir() -> Path:
+    """Repo-root `memory/agents` normally, so memories are shared with the TS
+    app. On a read-only serverless filesystem (Vercel) that path can't be
+    created, so fall back to the writable temp dir - TENDERMIND_MEMORY_DIR
+    overrides both. Note the temp fallback is per-instance and ephemeral:
+    memories won't survive across invocations there."""
+    override = os.environ.get("TENDERMIND_MEMORY_DIR")
+    if override:
+        return Path(override)
+
+    repo_dir = Path(__file__).resolve().parents[2] / "memory" / "agents"
+    try:
+        repo_dir.mkdir(parents=True, exist_ok=True)
+        return repo_dir
+    except OSError:
+        return Path(tempfile.gettempdir()) / "tendermind_memory" / "agents"
+
+
+MEMORY_DIR = _memory_dir()
 
 _AGENT_KEYWORDS = {
     "legal": ["LD", "retention", "termination", "warranty", "indemnity", "arbitration"],
