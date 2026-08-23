@@ -596,6 +596,72 @@ SCENARIOS = {
         classification="CONSTRUCTION CONTRACT",
         expected_profile="MEDIUM risk / PROCEED_WITH_CAUTION (bid_decision: YES)",
     ),
+    "definite-yes": dict(
+        ref_number="RFT 1000-SVC-0009",
+        contract_title="CONSTRUCTION CONTRACT — RETAIL UNIT INTERIOR REFRESH",
+        project_name="Harborview Retail Unit Interior Refresh",
+        location="Harborview Shopping Centre, Unit 12",
+        project_value="USD 420,000",
+        duration="2 months from Notice to Proceed",
+        client="Harborview Centre Management Co.",
+        financial_terms=[
+            "Contract Value: USD 420,000 (fixed price lump sum)",
+            "Payment Terms: Monthly invoicing based on certified work completion, "
+            "no retention withheld",
+            "Performance Bond: 5% of contract value, standard industry form",
+            "Payment Terms: Net 15 days from invoice date; client has an excellent "
+            "payment history",
+        ],
+        scope_items=[
+            "Cosmetic refresh of existing retail unit interior: paint, flooring, "
+            "and fixtures",
+            "Like-for-like lighting replacement, no new circuits required",
+            "No structural, mechanical, or load-bearing work of any kind",
+        ],
+        site_conditions=[
+            "Unit vacant and fully accessible for the full contract duration",
+            "All utilities in place and verified; no known hazards of any kind",
+            "No ground works and no geotechnical considerations",
+        ],
+        timeline=[
+            "Mobilization: Week 1",
+            "Refresh works: Weeks 2-7, all materials off-the-shelf and in stock",
+            "Handover: Week 8, schedule assessed by client as comfortable with "
+            "significant float",
+        ],
+        experience_requirements=[
+            "Minimum 2 years experience in commercial interior refresh work",
+            "Minimum 1 completed project of similar scale",
+        ],
+        liability_terms=[
+            "Contractor liability capped at 20% of contract value for direct damages",
+        ],
+        termination_terms=[
+            "Client may terminate for convenience with 14 days notice; contractor "
+            "paid for work completed",
+        ],
+        dispute_terms=[
+            "Disputes resolved by good-faith negotiation, then arbitration, under "
+            "the law of the project jurisdiction",
+        ],
+        security_terms=[
+            "Performance Bond: 5% of contract value",
+            "Insurance Requirements: General Liability minimum USD 1 Million per occurrence",
+        ],
+        ld_terms=[
+            "Schedule Delay Penalties: 0.05% of contract value per week of delay, "
+            "capped at 1% total",
+        ],
+        evaluation_criteria=[
+            "Technical Capability: 25%",
+            "Financial: 60%",
+            "HSE & Compliance: 15%",
+        ],
+        classification="CONSTRUCTION CONTRACT",
+        expected_profile="LOW risk / PROCEED (bid_decision: YES) - minimal clause "
+        "count keeps legal/engineering risk-item counts well under the "
+        "hard-override thresholds in agents/risk.py",
+    ),
 }
 
 if __name__ == "__main__":

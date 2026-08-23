@@ -105,7 +105,7 @@ def _extract_accounting_risks(accounting: dict[str, Any]) -> list[str]:
 
 
 def _recommendation(
-    legal_risk_count: int, engineering_risk_count: int, risk_level: str, counterparty_debarred: bool = False
+    engineering_risk_count: int, risk_level: str, counterparty_debarred: bool = False
 ) -> str:
     # A debarred/excluded counterparty is disqualifying on its own - an
     # otherwise-pristine legal/engineering read (each just one weighted
@@ -113,8 +113,17 @@ def _recommendation(
     # PROCEED, so this is checked before, not blended into, risk_level.
     if counterparty_debarred:
         return "DO_NOT_PROCEED"
-    if legal_risk_count > 8:
-        return "DO_NOT_PROCEED"
+    # There is deliberately no equivalent raw-count override for legal risks.
+    # LEGAL_AGENT_SYSTEM_PROMPT asks the agent to itemize against 4 compliance
+    # categories and 7 risk categories, so len(legal_risks) tracks how many of
+    # those *categories exist to comment on* far more than it tracks severity
+    # - measured against this codebase's own sample tenders, a favorable
+    # contract explicitly labeled "guaranteed-yes" scored legal_risk_count=10,
+    # while a contract of uncapped liability and onerous terms scored 11. A
+    # count that can't tell those two apart isn't a usable signal, hard-stop
+    # or otherwise; legal_rating (via legal_component, 40% of risk_score
+    # below) is what actually distinguishes them, since the agent correctly
+    # rates the former GREEN and the latter RED.
     if engineering_risk_count > 7:
         return "DO_NOT_PROCEED"
     if risk_level == "HIGH":
@@ -297,7 +306,7 @@ def risk_agent(legal: dict[str, Any], engineering: dict[str, Any], accounting: d
 
         risk_score = legal_component * 0.4 + engineering_component * 0.35 + accounting_component * 0.25
         risk_level = "HIGH" if counterparty_debarred else _risk_level(risk_score)
-        recommendation = _recommendation(len(legal_risks), len(engineering_risks), risk_level, counterparty_debarred)
+        recommendation = _recommendation(len(engineering_risks), risk_level, counterparty_debarred)
         bid_decision = "NO" if recommendation == "DO_NOT_PROCEED" else "YES"
 
         return {
