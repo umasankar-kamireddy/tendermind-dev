@@ -5,11 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { Btn, MarketingShell, MicroLabel } from '@/components/ui';
 
-const SAMPLE_ACCOUNTS = [
-  { username: 'tmadmin', password: 'tmadmin123', label: 'Admin — sees the Admin section' },
-  { username: 'tmanalyst', password: 'tmanalyst123', label: 'Analyst — Admin section hidden' },
-];
-
 const NEXT_STEPS = [
   {
     step: '01',
@@ -53,12 +48,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillSample = (account: (typeof SAMPLE_ACCOUNTS)[number]) => {
-    setUsername(account.username);
-    setPassword(account.password);
-    setError(null);
-  };
-
   const inputClass =
     'w-full bg-panel border border-line px-3.5 py-2.5 text-[14px] text-ink outline-none focus:border-line-strong';
 
@@ -73,8 +62,7 @@ export default function LoginPage() {
               Sign in to your workspace
             </h1>
             <p className="mt-4 text-[14px] leading-[1.7] text-ink-72">
-              This deployment runs with demo accounts so you can try the full analysis pipeline
-              without provisioning users.
+              Enter your workspace credentials to continue.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-9 space-y-5">
@@ -86,7 +74,7 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
                   className={inputClass}
-                  placeholder="tmadmin"
+                  placeholder="Username"
                 />
               </div>
               <div>
@@ -107,28 +95,6 @@ export default function LoginPage() {
                 {isSubmitting ? 'Signing in…' : 'Sign in'}
               </Btn>
             </form>
-
-            <div className="mt-10 border-t border-line pt-6">
-              <MicroLabel className="mb-4">Demo accounts</MicroLabel>
-              <div className="border border-line">
-                {SAMPLE_ACCOUNTS.map((account, i) => (
-                  <button
-                    key={account.username}
-                    type="button"
-                    onClick={() => fillSample(account)}
-                    className={`w-full text-left px-4 py-3.5 hover:bg-ink-08 transition-colors ${
-                      i > 0 ? 'border-t border-line' : ''
-                    }`}
-                  >
-                    <div className="font-mono text-[13px]">
-                      {account.username} / {account.password}
-                    </div>
-                    <div className="text-[11.5px] text-ink-45 mt-1">{account.label}</div>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-3 text-[11.5px] text-ink-45">Click an account to fill the form.</p>
-            </div>
           </div>
 
           {/* What happens next */}
