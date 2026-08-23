@@ -38,6 +38,38 @@ _MATCH_SCORE_THRESHOLD = 0.7
 # override), vs. merely worth surfacing as a softer signal.
 _DEBARRING_TOPICS = {"debarment", "sanction"}
 
+# The prompt (agents/prompts.py) tells the agent not to call this tool when
+# the document doesn't clearly name a counterparty - but that's advisory,
+# not enforced, and models don't reliably follow it. Observed in practice:
+# the agent calls the tool anyway with a placeholder like "Not specified".
+# Searching OpenSanctions for that literal string finds no match, which
+# comes back status="verified" - a false-clean result indistinguishable
+# from an actual clean counterparty, silently turning the check into a
+# no-op. Reject these deterministically before ever calling the API, rather
+# than relying on the prompt alone.
+_PLACEHOLDER_NAMES = {
+    "not specified",
+    "unspecified",
+    "not applicable",
+    "na",
+    "n a",
+    "n/a",
+    "not provided",
+    "not mentioned",
+    "not named",
+    "not stated",
+    "not identified",
+    "not given",
+    "not disclosed",
+    "not available",
+    "unknown",
+    "unnamed",
+    "none",
+    "nil",
+    "tbd",
+    "to be determined",
+}
+
 _client: httpx.AsyncClient | None = None
 
 
@@ -153,6 +185,14 @@ async def verify_counterparty(company_name: str) -> dict:
         return _unavailable(company_name, "No counterparty name provided.")
 
     normalized = normalize_company_name(company_name)
+
+    if normalized in _PLACEHOLDER_NAMES:
+        return _unavailable(
+            company_name,
+            f"'{company_name}' is a placeholder, not an actual counterparty name - "
+            "skipping the watchlist check rather than searching for it literally.",
+        )
+
     try:
         cached = await db.get_counterparty_lookup(normalized)
     except Exception:
