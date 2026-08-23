@@ -6,20 +6,35 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  * The Python pipeline is the one with LangGraph + LangSmith tracing and the
  * pgvector-backed company-knowledge retrieval (python/app/knowledge.py) -
- * routing through the old TS agents here would silently skip both. Request/
- * response shapes are kept identical between the two backends (fileName,
- * classification, legalAssessment, engineeringAssessment,
+ * routing through the old TS agents here would silently skip both, along
+ * with the counterparty watchlist check that now feeds the risk rating.
+ * Request/response shapes are kept identical between the two backends
+ * (fileName, classification, legalAssessment, engineeringAssessment,
  * accountingAssessment, riskAssessment, pricingBreakdown, bidRecommendation,
  * id) specifically so this can be a thin proxy with no shape translation.
  */
 const PYTHON_BACKEND_URL = process.env.PYTHON_BACKEND_URL || 'http://localhost:8000';
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const correlationId = request.headers.get('x-request-id') || crypto.randomUUID();
-    const authHeader = request.headers.get('authorization') || '';
+// Agents run in parallel behind the proxy; each can take up to its own timeout.
+export const maxDuration = 300;
 
+export async function POST(request: NextRequest) {
+  let body: { fileName?: string; extractedText?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
+  const { fileName, extractedText } = body;
+  if (!fileName || !extractedText) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  const correlationId = request.headers.get('x-request-id') || crypto.randomUUID();
+  const authHeader = request.headers.get('authorization') || '';
+
+  try {
     const response = await fetch(`${PYTHON_BACKEND_URL}/api/analyze`, {
       method: 'POST',
       headers: {
@@ -44,7 +59,7 @@ export async function POST(request: NextRequest) {
     console.error('Error proxying to Python analyze backend:', error);
     return NextResponse.json(
       { error: 'Failed to reach analysis backend - is the Python server running (uvicorn app.main:app --port 8000)?' },
-      { status: 502 },
+      { status: 502, headers: { 'X-Request-ID': correlationId } },
     );
   }
 }
