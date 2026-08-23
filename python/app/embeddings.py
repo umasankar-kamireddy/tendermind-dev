@@ -33,7 +33,7 @@ def _http() -> httpx.AsyncClient:
 
 
 async def _embed_via_openrouter(text: str) -> list[float] | None:
-    api_key = os.environ.get("OPENROUTER_API_KEY")
+    api_key = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not api_key:
         return None
     try:
@@ -50,8 +50,10 @@ async def _embed_via_openrouter(text: str) -> list[float] | None:
         return None
 
 
-async def _embed_via_openai(text: str) -> list[float]:
-    api_key = os.environ["OPENAI_API_KEY"]
+async def _embed_via_openai(text: str) -> list[float] | None:
+    api_key = (os.environ.get("OPENAI_API_KEY") or "").strip()
+    if not api_key:
+        return None
     resp = await _http().post(
         "https://api.openai.com/v1/embeddings",
         headers={"Authorization": f"Bearer {api_key}"},
@@ -62,7 +64,7 @@ async def _embed_via_openai(text: str) -> list[float]:
     return data["data"][0]["embedding"]
 
 
-async def embed_text(text: str) -> list[float]:
+async def embed_text(text: str) -> list[float] | None:
     """Embed a single piece of text, OpenRouter first then OpenAI fallback."""
     text = text[:8000]  # keep well under embedding model input limits
     embedding = await _embed_via_openrouter(text)

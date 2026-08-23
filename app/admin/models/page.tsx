@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
+import { useAuth } from '@/lib/auth';
 
 interface AgentOverride {
   provider: string | null;
@@ -38,6 +39,7 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 export default function AdminModelsPage() {
+  const { token } = useAuth();
   const [agents, setAgents] = useState<string[]>([]);
   const [providers, setProviders] = useState<string[]>([]);
   const [modelsByProvider, setModelsByProvider] = useState<Record<string, string[]>>({});
@@ -50,7 +52,9 @@ export default function AdminModelsPage() {
   useEffect(() => {
     const fetchOverrides = async () => {
       try {
-        const response = await fetch('/api/admin/models');
+        const response = await fetch('/api/admin/models', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!response.ok) throw new Error('Failed to load model overrides');
         const data: ModelOverridesResponse = await response.json();
         setAgents(data.agents);
@@ -65,7 +69,7 @@ export default function AdminModelsPage() {
     };
 
     fetchOverrides();
-  }, []);
+  }, [token]);
 
   const updateProvider = (agent: string, provider: string) => {
     setOverrides((prev) => ({
@@ -102,7 +106,10 @@ export default function AdminModelsPage() {
     try {
       const response = await fetch('/api/admin/models', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           overrides: agents.map((agent) => ({
             agent,

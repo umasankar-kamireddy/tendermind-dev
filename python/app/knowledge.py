@@ -66,6 +66,8 @@ async def index_bid_knowledge(
         except Exception:
             logger.warning("Failed to embed %s knowledge for bid %s", domain, bid_id, exc_info=True)
             continue
+        if embedding is None:
+            continue
         chunks.append(
             {
                 "bid_id": bid_id,
@@ -130,6 +132,8 @@ async def retrieve_domain_context(
         return f"No similar past {domain} history available (no document text)."
     try:
         query_embedding = await embed_text(document_text)
+        if query_embedding is None:
+            return f"No similar past {domain} history available (embeddings not configured)."
         chunks = await db.query_similar_chunks(
             query_embedding,
             domain,

@@ -156,7 +156,7 @@ def get_model(
             f"Unknown model provider '{provider}'. Available: {list_providers()}"
         )
 
-    api_key = os.environ.get(spec.api_key_env)
+    api_key = (os.environ.get(spec.api_key_env) or "").strip()
     if not api_key:
         raise ValueError(
             f"Missing API key for provider '{provider}': set {spec.api_key_env}"

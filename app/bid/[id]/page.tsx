@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import ResultsView from '@/components/ResultsView';
 import AppShell from '@/components/AppShell';
+import { useAuth } from '@/lib/auth';
 
 interface BidDetail {
   id: string;
@@ -22,6 +23,7 @@ interface BidDetail {
 }
 
 export default function BidDetailPage() {
+  const { token } = useAuth();
   const params = useParams();
   const bidId = params?.id as string;
   const [bid, setBid] = useState<BidDetail | null>(null);
@@ -31,7 +33,9 @@ export default function BidDetailPage() {
   useEffect(() => {
     const fetchBid = async () => {
       try {
-        const response = await fetch(`/api/bid/${bidId}`);
+        const response = await fetch(`/api/bid/${bidId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!response.ok) throw new Error('Bid not found');
         const data = await response.json();
         setBid(data);
@@ -45,7 +49,7 @@ export default function BidDetailPage() {
     if (bidId) {
       fetchBid();
     }
-  }, [bidId]);
+  }, [bidId, token]);
 
   if (isLoading) {
     return (

@@ -38,7 +38,23 @@ logger = logging.getLogger(__name__)
 # actually populated - a hardcoded "anthropic" fails every agent with
 # "Missing API key" the moment ANTHROPIC_API_KEY is empty, even if e.g.
 # OPENROUTER_API_KEY is set and working.
-DEFAULT_PROVIDER = os.environ.get("DEFAULT_LLM_PROVIDER", "anthropic")
+def _default_provider() -> str:
+    configured = os.environ.get("DEFAULT_LLM_PROVIDER", "").strip().lower()
+    if configured:
+        return configured
+    for candidate in ("openrouter", "openai", "anthropic", "google", "moonshot"):
+        if os.environ.get({
+            "openrouter": "OPENROUTER_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "google": "GOOGLE_API_KEY",
+            "moonshot": "MOONSHOT_API_KEY",
+        }[candidate], "").strip():
+            return candidate
+    return "anthropic"
+
+
+DEFAULT_PROVIDER = _default_provider()
 
 
 def _model_for(provider: str | None, model: str | None):

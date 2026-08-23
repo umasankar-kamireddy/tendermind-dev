@@ -7,6 +7,7 @@ import ResultsView from '@/components/ResultsView';
 import ProcessProgress, { ProcessStage } from '@/components/ProcessProgress';
 import AppShell from '@/components/AppShell';
 import StatCard from '@/components/StatCard';
+import { useAuth } from '@/lib/auth';
 
 interface DashboardStats {
   total: number;
@@ -29,6 +30,7 @@ interface AnalysisResult {
 }
 
 export default function Home() {
+  const { token } = useAuth();
   const [stage, setStage] = useState<ProcessStage | null>(null);
   const [progress, setProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
@@ -53,7 +55,9 @@ export default function Home() {
 
   const refreshStats = async () => {
     try {
-      const response = await fetch('/api/bids?limit=100');
+      const response = await fetch('/api/bids?limit=100', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) return;
       const data = await response.json();
       const bids: Array<{ risk_score?: number; risk_factors?: { bid_decision?: string } }> =
@@ -82,7 +86,7 @@ export default function Home() {
 
   useEffect(() => {
     refreshStats();
-  }, []);
+  }, [token]);
 
   const handleUploadStart = (file: File) => {
     setUploadedFileName(file.name);
@@ -97,6 +101,7 @@ export default function Home() {
   const handleUploadSuccess = async (data: {
     fileName: string;
     extractedText: string;
+    documentId?: string;
     file: File;
   }) => {
     setUploadedFileName(data.fileName);
@@ -118,15 +123,18 @@ export default function Home() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
           fileName: data.fileName,
           extractedText: data.extractedText,
+          documentId: data.documentId,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze document');
+        const failure = await response.json().catch(() => ({}));
+        throw new Error(failure.error || failure.detail || 'Failed to analyze document');
       }
 
       const result = await response.json();

@@ -33,7 +33,23 @@ logger = logging.getLogger(__name__)
 
 # Same env-configurable default as agents/nodes.py (kept in sync manually -
 # see that module's DEFAULT_PROVIDER comment for why this isn't hardcoded).
-DEFAULT_PROVIDER = os.environ.get("DEFAULT_LLM_PROVIDER", "anthropic")
+def _default_provider() -> str:
+    configured = os.environ.get("DEFAULT_LLM_PROVIDER", "").strip().lower()
+    if configured:
+        return configured
+    for candidate in ("openrouter", "openai", "anthropic", "google", "moonshot"):
+        if os.environ.get({
+            "openrouter": "OPENROUTER_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "anthropic": "ANTHROPIC_API_KEY",
+            "google": "GOOGLE_API_KEY",
+            "moonshot": "MOONSHOT_API_KEY",
+        }[candidate], "").strip():
+            return candidate
+    return "anthropic"
+
+
+DEFAULT_PROVIDER = _default_provider()
 
 _ORCHESTRATOR_SYSTEM_PROMPT = """You are a document routing orchestrator for an EPC (Engineering, Procurement, and Construction) tender analysis system. You read a full tender/contract document once and split it into three excerpts, one per downstream specialist:
 

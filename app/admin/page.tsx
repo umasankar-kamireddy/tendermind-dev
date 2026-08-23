@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
+import { useAuth } from '@/lib/auth';
 
 interface BoqItem {
   key: string;
@@ -57,6 +58,7 @@ function computeSummary(items: BoqItem[], contingencyPercentage: number): BoqSum
 const CONTINGENCY_PERCENTAGE = 0.1;
 
 export default function AdminBoqPage() {
+  const { token } = useAuth();
   const [items, setItems] = useState<BoqItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +68,9 @@ export default function AdminBoqPage() {
   useEffect(() => {
     const fetchDefaults = async () => {
       try {
-        const response = await fetch('/api/admin/boq');
+        const response = await fetch('/api/admin/boq', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!response.ok) throw new Error('Failed to load BOQ defaults');
         const data = await response.json();
         setItems(data.items);
@@ -78,7 +82,7 @@ export default function AdminBoqPage() {
     };
 
     fetchDefaults();
-  }, []);
+  }, [token]);
 
   const updateItem = (key: string, field: keyof BoqItem, value: string) => {
     setItems((prev) =>
@@ -104,7 +108,10 @@ export default function AdminBoqPage() {
     try {
       const response = await fetch('/api/admin/boq', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ items }),
       });
 
