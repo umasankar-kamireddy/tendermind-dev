@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import ResultsView from '@/components/ResultsView';
 import AppShell from '@/components/AppShell';
+import { useAuth } from '@/lib/auth';
 import { Btn, MicroLabel, RuledNote, StatTile, StatTileGrid, riskTone } from '@/components/ui';
 
 interface BidDetail {
@@ -22,6 +23,7 @@ interface BidDetail {
 }
 
 export default function BidDetailPage() {
+  const { token, isLoading: authLoading } = useAuth();
   const params = useParams();
   const bidId = params?.id as string;
   const [bid, setBid] = useState<BidDetail | null>(null);
@@ -29,23 +31,34 @@ export default function BidDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // /api/bid/{id} is authenticated; this fetch previously sent no header
+    // and so 401'd for every bid, which surfaced as "Bid not found". Wait
+    // for the stored session before asking.
+    if (!bidId || authLoading) return;
+
+    let cancelled = false;
+
     const fetchBid = async () => {
       try {
-        const response = await fetch(`/api/bid/${bidId}`);
+        const response = await fetch(`/api/bid/${bidId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (response.status === 401) throw new Error('Your session has expired - sign in again.');
         if (!response.ok) throw new Error('Bid not found');
         const data = await response.json();
-        setBid(data);
+        if (!cancelled) setBid(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
-    if (bidId) {
-      fetchBid();
-    }
-  }, [bidId]);
+    fetchBid();
+    return () => {
+      cancelled = true;
+    };
+  }, [bidId, token, authLoading]);
 
   if (isLoading) {
     return (
