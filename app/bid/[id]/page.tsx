@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import ResultsView from '@/components/ResultsView';
 import AppShell from '@/components/AppShell';
+import { Btn, MicroLabel, RuledNote, StatTile, StatTileGrid, riskTone } from '@/components/ui';
 
 interface BidDetail {
   id: string;
@@ -49,12 +49,9 @@ export default function BidDetailPage() {
 
   if (isLoading) {
     return (
-      <AppShell title="Bid Details">
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400 font-medium">Loading bid details...</p>
-          </div>
+      <AppShell title="Bid details">
+        <div className="border border-line px-4 py-16 text-center">
+          <div className="font-mono text-[12px] text-ink-45">Loading bid details…</div>
         </div>
       </AppShell>
     );
@@ -62,18 +59,15 @@ export default function BidDetailPage() {
 
   if (error || !bid) {
     return (
-      <AppShell title="Bid Details">
-        <div className="p-6 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-500 rounded-lg">
-          <p className="text-red-700 dark:text-red-400 font-semibold">Error</p>
-          <p className="text-red-600 dark:text-red-400 text-sm mt-1">{error || 'Bid not found'}</p>
-          <div className="flex gap-4 mt-4">
-            <Link href="/" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
-              ← Back to Home
-            </Link>
-            <Link href="/bids" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
-              ← Back to Bid History
-            </Link>
-          </div>
+      <AppShell title="Bid details">
+        <RuledNote tone="danger">{error || 'Bid not found'}</RuledNote>
+        <div className="flex items-center gap-3 mt-6">
+          <Btn href="/bids" variant="outline">
+            Bid history
+          </Btn>
+          <Btn href="/" variant="outline">
+            New analysis
+          </Btn>
         </div>
       </AppShell>
     );
@@ -91,40 +85,31 @@ export default function BidDetailPage() {
 
   return (
     <AppShell
-      title="Bid Details"
+      title="Bid details"
       subtitle={bid.file_name}
       actions={
-        <Link href="/bids" className="text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium">
-          ← Back to Bid History
-        </Link>
+        <Btn href="/bids" variant="outline">
+          Bid history
+        </Btn>
       }
     >
       <div>
         {/* Metadata */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Document Type</p>
-              <p className="font-semibold text-lg">{bid.doc_type}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Confidence</p>
-              <p className="font-semibold text-lg">
-                {(bid.classification_confidence * 100).toFixed(1)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Risk Score</p>
-              <p className="font-semibold text-lg">
-                {(bid.risk_score * 100).toFixed(0)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Uploaded</p>
-              <p className="font-semibold text-sm">{formatDate(bid.created_at)}</p>
-            </div>
-          </div>
-        </div>
+        <StatTileGrid cols={4} className="mb-10">
+          <StatTile label="Document type" value={bid.doc_type} mono={false} />
+          <StatTile
+            label="Classification confidence"
+            value={`${(bid.classification_confidence * 100).toFixed(0)}%`}
+          />
+          <StatTile
+            label="Risk score"
+            value={`${(bid.risk_score * 100).toFixed(0)}%`}
+            tone={riskTone(
+              bid.risk_score < 0.33 ? 'LOW' : bid.risk_score < 0.67 ? 'MEDIUM' : 'HIGH',
+            )}
+          />
+          <StatTile label="Uploaded" value={formatDate(bid.created_at)} mono={false} />
+        </StatTileGrid>
 
         {/* Main Results View */}
         <ResultsView
@@ -147,17 +132,23 @@ export default function BidDetailPage() {
         />
 
         {/* Extracted Text Preview */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mt-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-            Extracted Text Preview
-          </h2>
-          <div className="bg-gray-50 dark:bg-gray-900 rounded p-4 max-h-96 overflow-y-auto">
-            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono">
+        <section className="mt-14">
+          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-3 mb-4">
+            <h2 className="text-[19px] font-semibold tracking-[-0.02em]">Extracted text</h2>
+            <span className="font-mono text-[12px] text-ink-60">
+              {bid.extracted_text.length.toLocaleString()} characters
+            </span>
+          </div>
+          <div className="border border-line bg-panel px-4 py-4 max-h-96 overflow-y-auto">
+            <p className="text-[12.5px] leading-[1.7] text-ink-72 whitespace-pre-wrap font-mono">
               {bid.extracted_text.substring(0, 2000)}
-              {bid.extracted_text.length > 2000 && '...'}
+              {bid.extracted_text.length > 2000 && '…'}
             </p>
           </div>
-        </div>
+          {bid.extracted_text.length > 2000 ? (
+            <MicroLabel className="mt-3">First 2,000 characters shown</MicroLabel>
+          ) : null}
+        </section>
       </div>
     </AppShell>
   );

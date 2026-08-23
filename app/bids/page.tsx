@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '@/components/AppShell';
+import { Btn, MicroLabel, RuledNote, riskTextClass } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 
 interface Bid {
@@ -13,6 +14,21 @@ interface Bid {
   created_at: string;
   recommendation: Record<string, unknown>;
   risk_factors: Record<string, unknown>;
+}
+
+/** Shared column track so the header rule and the rows stay aligned. */
+const COLS =
+  'grid grid-cols-[minmax(0,1fr)_120px_90px_100px_150px_170px_150px] gap-4 items-center';
+
+/**
+ * The stored risk_score is a 0-1 fraction; the design shows risk as a band
+ * (LOW/MEDIUM/HIGH) with the percentage as a secondary mono figure, matching
+ * the thresholds agents/risk.py uses to derive risk_level.
+ */
+function riskLevel(score: number): string {
+  if (score < 0.33) return 'LOW';
+  if (score < 0.67) return 'MEDIUM';
+  return 'HIGH';
 }
 
 export default function BidsPage() {
@@ -65,176 +81,136 @@ export default function BidsPage() {
     }
   };
 
-  const getRiskColor = (score: number) => {
-    if (score < 0.4) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40';
-    if (score < 0.7) return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-950/40';
-    return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40';
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
 
   return (
     <AppShell
-      title="Bid History"
+      title="Bid history"
       subtitle="Review previous document analyses and bid recommendations"
       actions={
-        <Link
-          href="/"
-          className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
-          New Analysis
-        </Link>
+        <Btn href="/" variant="accent">
+          New analysis
+        </Btn>
       }
     >
-      <div>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 font-medium">Loading bid history...</p>
-            </div>
-          </div>
-        ) : error ? (
-          <div className="p-6 bg-red-50 dark:bg-red-950/40 border-l-4 border-red-500 rounded-lg">
-            <p className="text-red-700 dark:text-red-400 font-semibold">Error</p>
-            <p className="text-red-600 dark:text-red-400 text-sm mt-1">{error}</p>
-          </div>
-        ) : bids.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">No bids found yet</p>
-            <Link
-              href="/"
-              className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Upload Your First Document
-            </Link>
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      File Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      Document Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      Risk Level
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      Recommend to Bid?
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      Bid Recommendation
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      Uploaded
-                    </th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bids.map((bid) => (
-                    <tr key={bid.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                        {bid.file_name}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 rounded-full text-xs font-semibold">
-                          {bid.doc_type}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskColor(bid.risk_score)}`}
-                        >
-                          {(bid.risk_score * 100).toFixed(0)}%
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        {(() => {
-                          const decision = String(
-                            bid.risk_factors?.bid_decision || '',
-                          ).toUpperCase();
-                          if (!decision) {
-                            return <span className="text-gray-400 dark:text-gray-500">N/A</span>;
-                          }
-                          const isYes = decision === 'YES';
-                          return (
-                            <span
-                              className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-                                isYes
-                                  ? 'text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40'
-                                  : 'text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-900/40'
-                              }`}
-                            >
-                              {decision}
-                            </span>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 text-sm font-semibold">
-                        {(() => {
-                          const decision = String(
-                            bid.risk_factors?.bid_decision || '',
-                          ).toUpperCase();
-                          const price = bid.recommendation
-                            ?.recommended_bid_price;
-
-                          if (decision !== 'YES') {
-                            return (
-                              <span className="text-gray-400 dark:text-gray-500 font-normal">
-                                Not recommended
-                              </span>
-                            );
-                          }
-
-                          return price != null
-                            ? `$${(price as number).toLocaleString()}`
-                            : 'N/A';
-                        })()}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
-                        {formatDate(bid.created_at)}
-                      </td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex items-center gap-4">
-                          <Link
-                            href={`/bid/${bid.id}`}
-                            className="text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                          >
-                            View Details
-                          </Link>
-                          <button
-                            onClick={() => handleDelete(bid)}
-                            disabled={deletingId === bid.id}
-                            className="text-red-600 dark:text-red-400 hover:underline font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {deletingId === bid.id ? 'Removing...' : 'Remove'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+      <div className="font-mono text-[12px] text-ink-60 -mt-4 mb-8">
+        {isLoading
+          ? 'Loading…'
+          : `${bids.length} analysed ${bids.length === 1 ? 'document' : 'documents'}`}
       </div>
+
+      {isLoading ? (
+        <div className="border border-line px-4 py-16 text-center">
+          <div className="font-mono text-[12px] text-ink-45">Loading bid history…</div>
+        </div>
+      ) : error ? (
+        <RuledNote tone="danger">{error}</RuledNote>
+      ) : bids.length === 0 ? (
+        <div className="border border-line px-4 py-16 text-center">
+          <p className="text-[14px] text-ink-60">No documents analysed yet.</p>
+          <div className="mt-6 flex justify-center">
+            <Btn href="/" variant="accent">
+              Upload your first document
+            </Btn>
+          </div>
+        </div>
+      ) : (
+        <div className="border border-line overflow-x-auto">
+          <div className="min-w-[1080px]">
+            <div className={`${COLS} px-4 py-2.5 border-b border-line bg-panel`}>
+              <div className="micro">File name</div>
+              <div className="micro">Type</div>
+              <div className="micro">Risk</div>
+              <div className="micro">Bid?</div>
+              <div className="micro">Recommendation</div>
+              <div className="micro">Uploaded</div>
+              <div className="micro">Action</div>
+            </div>
+
+            {bids.map((bid) => {
+              const decision = String(bid.risk_factors?.bid_decision || '').toUpperCase();
+              const price = bid.recommendation?.recommended_bid_price;
+              const level = riskLevel(bid.risk_score);
+
+              return (
+                <div
+                  key={bid.id}
+                  className={`${COLS} px-4 py-3.5 border-b border-line last:border-b-0 hover:bg-ink-08 transition-colors`}
+                >
+                  <div className="font-mono text-[12.5px] truncate">{bid.file_name}</div>
+
+                  <div className="text-[12px] text-accent">{bid.doc_type}</div>
+
+                  <div>
+                    <div className={`text-[12.5px] font-medium ${riskTextClass(level)}`}>
+                      {level}
+                    </div>
+                    <div className="font-mono text-[11px] text-ink-45 mt-0.5">
+                      {(bid.risk_score * 100).toFixed(0)}%
+                    </div>
+                  </div>
+
+                  <div>
+                    {decision ? (
+                      <span
+                        className={`inline-block border-l-2 pl-2 text-[12px] font-medium ${
+                          decision === 'YES'
+                            ? 'border-ok text-ok'
+                            : decision === 'MANUAL_REVIEW'
+                              ? 'border-accent text-accent'
+                              : 'border-danger text-danger'
+                        }`}
+                      >
+                        {decision === 'MANUAL_REVIEW' ? 'Review' : decision === 'YES' ? 'Bid' : 'No bid'}
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-ink-45">—</span>
+                    )}
+                  </div>
+
+                  <div className="font-mono text-[12.5px]">
+                    {decision !== 'YES' ? (
+                      <span className="text-ink-45">Not recommended</span>
+                    ) : price != null ? (
+                      `$${(price as number).toLocaleString()}`
+                    ) : (
+                      <span className="text-ink-45">—</span>
+                    )}
+                  </div>
+
+                  <div className="font-mono text-[11.5px] text-ink-45">
+                    {formatDate(bid.created_at)}
+                  </div>
+
+                  <div className="flex items-center gap-4 text-[12.5px]">
+                    <Link href={`/bid/${bid.id}`} className="text-accent hover:underline">
+                      View
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(bid)}
+                      disabled={deletingId === bid.id}
+                      className="text-ink-60 hover:text-danger transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      {deletingId === bid.id ? 'Removing…' : 'Remove'}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <MicroLabel className="mt-4">
+        Removing a document also deletes the agent memories learned from it
+      </MicroLabel>
     </AppShell>
   );
 }

@@ -1,8 +1,6 @@
 'use client';
-
 import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
-
 interface BoqItem {
   key: string;
   name: string;
@@ -12,11 +10,9 @@ interface BoqItem {
   unit_rate: number | null;
   lump_sum_amount: number | null;
 }
-
 interface BoqItemWithAmount extends BoqItem {
   amount: number;
 }
-
 interface BoqSummary {
   items: BoqItemWithAmount[];
   measured_cost: number;
@@ -25,7 +21,6 @@ interface BoqSummary {
   contingency_amount: number;
   total_estimated_cost: number;
 }
-
 function computeSummary(items: BoqItem[], contingencyPercentage: number): BoqSummary {
   const withAmounts: BoqItemWithAmount[] = items.map((item) => ({
     ...item,
@@ -34,7 +29,6 @@ function computeSummary(items: BoqItem[], contingencyPercentage: number): BoqSum
         ? item.lump_sum_amount || 0
         : (item.quantity || 0) * (item.unit_rate || 0),
   }));
-
   const measured_cost = withAmounts
     .filter((item) => item.item_type === 'measured')
     .reduce((sum, item) => sum + item.amount, 0);
@@ -43,7 +37,6 @@ function computeSummary(items: BoqItem[], contingencyPercentage: number): BoqSum
     .reduce((sum, item) => sum + item.amount, 0);
   const base_cost = measured_cost + lump_sum_cost;
   const contingency_amount = base_cost * contingencyPercentage;
-
   return {
     items: withAmounts,
     measured_cost,
@@ -53,16 +46,13 @@ function computeSummary(items: BoqItem[], contingencyPercentage: number): BoqSum
     total_estimated_cost: base_cost + contingency_amount,
   };
 }
-
 const CONTINGENCY_PERCENTAGE = 0.1;
-
 export default function AdminBoqPage() {
   const [items, setItems] = useState<BoqItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
-
   useEffect(() => {
     const fetchDefaults = async () => {
       try {
@@ -76,10 +66,8 @@ export default function AdminBoqPage() {
         setIsLoading(false);
       }
     };
-
     fetchDefaults();
   }, []);
-
   const updateItem = (key: string, field: keyof BoqItem, value: string) => {
     setItems((prev) =>
       prev
@@ -94,20 +82,17 @@ export default function AdminBoqPage() {
         : prev,
     );
   };
-
   const handleSave = async () => {
     if (!items) return;
     setIsSaving(true);
     setError(null);
     setSavedMessage(null);
-
     try {
       const response = await fetch('/api/admin/boq', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
       });
-
       if (!response.ok) throw new Error('Failed to save BOQ defaults');
       setSavedMessage('Default values saved.');
     } catch (err) {
@@ -116,9 +101,7 @@ export default function AdminBoqPage() {
       setIsSaving(false);
     }
   };
-
   const summary = items ? computeSummary(items, CONTINGENCY_PERCENTAGE) : null;
-
   return (
     <AppShell
       title="Default Cost Items"
@@ -127,36 +110,33 @@ export default function AdminBoqPage() {
     >
       <div className="max-w-5xl space-y-6">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-200 dark:border-blue-800 border-t-blue-600 mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 font-medium">Loading defaults...</p>
-            </div>
+          <div className="border border-line px-4 py-16 text-center">
+            <div className="font-mono text-[12px] text-ink-45">Loading defaults…</div>
           </div>
         ) : items ? (
           <>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <div className="border border-line">
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+                  <thead className="bg-panel border-b border-line">
                     <tr>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-ink">
                         Item
                       </th>
-                      <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-ink">
                         Rate / Lump Sum
                       </th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item) => (
-                      <tr key={item.key} className="border-b border-gray-200 dark:border-gray-700">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <tr key={item.key} className="border-b border-line">
+                        <td className="px-6 py-4 text-sm font-medium text-ink">
                           {item.name}
                         </td>
                         <td className="px-6 py-4 text-sm">
                           <div className="flex items-center gap-1">
-                            <span className="text-gray-500 dark:text-gray-400">$</span>
+                            <span className="text-ink-45">$</span>
                             <input
                               type="number"
                               value={
@@ -173,10 +153,10 @@ export default function AdminBoqPage() {
                                   e.target.value,
                                 )
                               }
-                              className="w-28 px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                              className="w-28 px-2 py-1 border border-line bg-panel text-ink"
                             />
                             {item.item_type === 'measured' && item.unit && (
-                              <span className="text-gray-500 dark:text-gray-400 text-xs">
+                              <span className="text-ink-45 text-xs">
                                 /{item.unit}
                               </span>
                             )}
@@ -187,58 +167,56 @@ export default function AdminBoqPage() {
                   </tbody>
                 </table>
               </div>
-
-              <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div className="p-6 border-t border-line flex items-center justify-between">
                 <div>
-                  {error && <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>}
+                  {error && <p className="text-danger text-sm">{error}</p>}
                   {savedMessage && (
-                    <p className="text-green-600 dark:text-green-400 text-sm">{savedMessage}</p>
+                    <p className="text-ok text-sm">{savedMessage}</p>
                   )}
                 </div>
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="px-6 py-2 bg-accent text-cream hover:bg-ink transition-colors disabled:opacity-50"
                 >
                   {isSaving ? 'Saving...' : 'Save Defaults'}
                 </button>
               </div>
             </div>
-
             {summary && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              <div className="border border-line p-6">
+                <h2 className="text-xl font-bold text-ink mb-4">
                   Calculated Accounting Estimate
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/40 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Measured Items</p>
+                  <div className="p-4 bg-panel">
+                    <p className="text-sm text-ink-60">Measured Items</p>
                     <p className="font-semibold text-lg">
                       ${summary.measured_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/40 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Lump Sum Items</p>
+                  <div className="p-4 bg-panel">
+                    <p className="text-sm text-ink-60">Lump Sum Items</p>
                     <p className="font-semibold text-lg">
                       ${summary.lump_sum_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
-                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950/40 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <div className="p-4 bg-panel">
+                    <p className="text-sm text-ink-60">
                       Contingency ({(summary.contingency_percentage * 100).toFixed(0)}%)
                     </p>
                     <p className="font-semibold text-lg">
                       ${summary.contingency_amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
-                  <div className="p-4 bg-green-50 dark:bg-green-950/40 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Estimated Cost</p>
+                  <div className="p-4 bg-panel">
+                    <p className="text-sm text-ink-60">Total Estimated Cost</p>
                     <p className="font-semibold text-lg">
                       ${summary.total_estimated_cost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     </p>
                   </div>
                 </div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs mt-4">
+                <p className="text-ink-45 text-xs mt-4">
                   This estimate is used as the accounting baseline for new document analyses
                   whenever the document itself doesn&apos;t specify enough cost detail.
                 </p>
