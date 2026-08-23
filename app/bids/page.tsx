@@ -32,17 +32,22 @@ function riskLevel(score: number): string {
 }
 
 export default function BidsPage() {
-  const { token } = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
   const [bids, setBids] = useState<Bid[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Wait for the stored session to be restored. Firing before the token
+    // arrives produced a guaranteed 401 whose rejection could land *after*
+    // the authenticated retry resolved, leaving "Failed to fetch bids" over
+    // a table that had loaded. `cancelled` drops any such stale response.
+    if (authLoading) return;
+
+    let cancelled = false;
+
     const fetchBids = async () => {
-      // Cleared per attempt: this effect re-runs when the token arrives, and
-      // the first (unauthenticated) attempt's 401 must not survive the
-      // successful retry - it rendered an error banner above a loaded table.
       setError(null);
       try {
         const response = await fetch('/api/bids?limit=50', {
@@ -50,16 +55,19 @@ export default function BidsPage() {
         });
         if (!response.ok) throw new Error('Failed to fetch bids');
         const data = await response.json();
-        setBids(data.bids || []);
+        if (!cancelled) setBids(data.bids || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     fetchBids();
-  }, [token]);
+    return () => {
+      cancelled = true;
+    };
+  }, [token, authLoading]);
 
   const handleDelete = async (bid: Bid) => {
     if (

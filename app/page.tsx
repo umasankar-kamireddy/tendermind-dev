@@ -30,7 +30,7 @@ interface AnalysisResult {
 }
 
 export default function Home() {
-  const { token } = useAuth();
+  const { token, isLoading: authLoading } = useAuth();
   const [stage, setStage] = useState<ProcessStage | null>(null);
   const [progress, setProgress] = useState(0);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
@@ -55,7 +55,12 @@ export default function Home() {
 
   const refreshStats = async () => {
     try {
-      const response = await fetch('/api/bids?limit=100');
+      // /api/bids requires auth - this went out without the header and so
+      // always 401'd, which the catch below silently swallowed and left the
+      // stat row permanently hidden.
+      const response = await fetch('/api/bids?limit=100', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) return;
       const data = await response.json();
       const bids: Array<{ risk_score?: number; risk_factors?: { bid_decision?: string } }> =
@@ -83,8 +88,9 @@ export default function Home() {
   };
 
   useEffect(() => {
-    refreshStats();
-  }, []);
+    if (!authLoading) refreshStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, authLoading]);
 
   const handleUploadStart = (file: File) => {
     setUploadedFileName(file.name);
