@@ -156,8 +156,13 @@ async def verify_counterparty_tool(company_name: str) -> str:
     than taking the document's own description at face value.
 
     Args:
-        company_name: the client/awarding authority's name as it appears in
-            the document.
+        company_name: the client/awarding authority's full legal name,
+            copied verbatim from the document, including any legal suffix
+            (Ltd, PLC, JSC, GmbH, Authority). Never a placeholder like
+            "not specified", "unknown" or "the client" - if the document
+            names no counterparty, don't call this tool at all. A
+            placeholder matches no watchlist, so it returns clean and
+            would falsely certify an unscreened counterparty.
 
     Returns:
         A JSON object (as a string) with the watchlist status -

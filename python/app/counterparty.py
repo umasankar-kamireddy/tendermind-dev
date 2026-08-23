@@ -34,6 +34,35 @@ _TIMEOUT_SECONDS = 10.0
 # shouldn't be enough to flag a counterparty.
 _MATCH_SCORE_THRESHOLD = 0.7
 
+# Placeholders an agent reaches for when the document doesn't clearly name a
+# counterparty. Screening one of these is worse than not screening at all:
+# OpenSanctions returns no match for "not specified", which reads back as
+# status="verified" / "no adverse findings" and tells risk.py the
+# counterparty is clean (score 0.15) when nothing was actually checked.
+_PLACEHOLDER_NAMES = {
+    "n a",
+    "na",
+    "none",
+    "none specified",
+    "not applicable",
+    "not available",
+    "not disclosed",
+    "not given",
+    "not named",
+    "not provided",
+    "not specified",
+    "not stated",
+    "tbd",
+    "the client",
+    "the counterparty",
+    "the employer",
+    "the owner",
+    "to be determined",
+    "unknown",
+    "unnamed",
+    "unspecified",
+}
+
 # Topics that make a match disqualifying on its own (feed risk.py's hard
 # override), vs. merely worth surfacing as a softer signal.
 _DEBARRING_TOPICS = {"debarment", "sanction"}
@@ -153,6 +182,16 @@ async def verify_counterparty(company_name: str) -> dict:
         return _unavailable(company_name, "No counterparty name provided.")
 
     normalized = normalize_company_name(company_name)
+
+    # A placeholder is not a name to screen - see _PLACEHOLDER_NAMES. Return
+    # "unavailable" (neutral in risk.py) rather than letting a guaranteed
+    # no-match come back as a clean bill of health.
+    if normalized in _PLACEHOLDER_NAMES or len(normalized) < 3:
+        logger.info("Counterparty screening skipped - placeholder name %r", company_name)
+        return _unavailable(
+            company_name,
+            "No counterparty was named in the document, so no watchlist check was performed.",
+        )
     try:
         cached = await db.get_counterparty_lookup(normalized)
     except Exception:

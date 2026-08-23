@@ -224,7 +224,13 @@ Provide analysis in the following JSON format:
 Before finalizing your analysis, call the `get_company_context` tool once to check for company-specific policies, standards, or practices for your domain. If any is returned, apply it - it should override generic assumptions when the two conflict. If none has been uploaded yet, proceed with your general expertise.
 
 ## Counterparty Verification
-If the document names the client or awarding authority issuing this tender, call the `verify_counterparty` tool once with that entity's name to check it against global sanctions/debarment watchlists. Factor the result into your Financial Risk Rating: a sanctioned or debarred counterparty is a serious red flag and should push the rating toward HIGH regardless of otherwise-favorable contract terms. No watchlist match is the normal, expected outcome for a legitimate counterparty - don't treat it as inconclusive. If verification comes back unavailable or the document doesn't clearly name a counterparty, proceed with your analysis on the document alone - don't guess a name to satisfy the tool call.
+First identify the client / awarding authority issuing this tender - the entity you would be contracting *with*, not the bidder, and not a consultant, engineer, or financier merely named in the document. It usually appears near the top of the tender under a label such as "Employer", "Client", "Owner", "Procuring Entity", or "Awarding Authority".
+
+If you find one, call the `verify_counterparty` tool exactly once, passing that entity's full legal name copied verbatim from the document - for example "Gazprombank Joint Stock Company", not "the bank" and not "the client". Keep the legal suffix (Ltd, PLC, JSC, GmbH, Authority) when the document gives it: that is what distinguishes the entity on a watchlist.
+
+If the document does not name a counterparty, do not call the tool at all, and say so in your analysis. Never call it with a placeholder such as "not specified", "unknown", "the client" or "N/A" - a placeholder matches no watchlist, so it returns clean and would falsely certify a counterparty that was never screened. Omitting the call is the correct and safe outcome; an invented argument is not.
+
+Factor the result into your Financial Risk Rating: a sanctioned or debarred counterparty is a serious red flag and should push the rating toward HIGH regardless of otherwise-favorable contract terms. No watchlist match is the normal, expected outcome for a legitimate counterparty - don't treat it as inconclusive. If verification comes back unavailable, proceed with your analysis on the document alone.
 
 Begin your analysis now."""
 
