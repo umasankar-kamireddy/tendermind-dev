@@ -1,39 +1,28 @@
-"""File-based agent memory manager + injector.
-Ported from lib/memory/manager.ts and lib/memory/injector.ts. Shares the
-same on-disk store (repo-root `memory/agents/*.json`) as the TS app, so
-memories saved by either implementation are visible to both."""
+"""Postgres-backed agent memory manager + injector.
+
+Ported from lib/memory/manager.ts and lib/memory/injector.ts, which kept
+learnings in `memory/agents/*.json`. That store can't work on a serverless
+deployment: the filesystem is read-only apart from a per-instance temp dir,
+so file-based memories either crashed the agents or silently vanished
+between invocations. Learnings now live in the `agent_memories` table
+(app/db.py) alongside the rest of the app's state, which is what makes them
+actually accumulate across runs.
+
+Every entry point is async because the pool is - see agents/nodes.py and
+app/routers/bid_detail.py for the callers.
+"""
 
 from __future__ import annotations
 
-import json
-import os
+import logging
 import re
-import tempfile
 import time
 import uuid
-from pathlib import Path
 from typing import Any
 
+from app import db
 
-def _memory_dir() -> Path:
-    """Repo-root `memory/agents` normally, so memories are shared with the TS
-    app. On a read-only serverless filesystem (Vercel) that path can't be
-    created, so fall back to the writable temp dir - TENDERMIND_MEMORY_DIR
-    overrides both. Note the temp fallback is per-instance and ephemeral:
-    memories won't survive across invocations there."""
-    override = os.environ.get("TENDERMIND_MEMORY_DIR")
-    if override:
-        return Path(override)
-
-    repo_dir = Path(__file__).resolve().parents[2] / "memory" / "agents"
-    try:
-        repo_dir.mkdir(parents=True, exist_ok=True)
-        return repo_dir
-    except OSError:
-        return Path(tempfile.gettempdir()) / "tendermind_memory" / "agents"
-
-
-MEMORY_DIR = _memory_dir()
+logger = logging.getLogger(__name__)
 
 _AGENT_KEYWORDS = {
     "legal": ["LD", "retention", "termination", "warranty", "indemnity", "arbitration"],
@@ -51,68 +40,37 @@ _MEMORY_TYPE_BY_AGENT = {
 
 
 class MemoryManager:
-    def __init__(self) -> None:
-        self._memories: dict[str, dict[str, Any]] = {}
-        self._loaded = False
+    """Thin async wrapper over the agent_memories table. Kept as a class so
+    the call sites (and the TS port's shape) stay recognisable; it holds no
+    cache of its own - the whole point of moving off the file store is that
+    one instance's memories must be visible to the next request, which may
+    land on a different serverless instance."""
 
-    def _ensure_loaded(self) -> None:
-        if self._loaded:
-            return
-        MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-        for path in MEMORY_DIR.glob("*.json"):
-            try:
-                memory = json.loads(path.read_text())
-                self._memories[memory["id"]] = memory
-            except (json.JSONDecodeError, KeyError):
-                continue
-        self._loaded = True
-
-    def _save_to_disk(self, memory: dict[str, Any]) -> None:
-        MEMORY_DIR.mkdir(parents=True, exist_ok=True)
-        path = MEMORY_DIR / f"{memory['id']}.json"
-        path.write_text(json.dumps(memory, indent=2))
-
-    def save_memory(self, memory: dict[str, Any]) -> None:
-        self._ensure_loaded()
+    async def save_memory(self, memory: dict[str, Any]) -> str:
         memory_id = memory.get("id") or f"mem_{int(time.time() * 1000)}_{uuid.uuid4().hex[:9]}"
-        memory = {**memory, "id": memory_id}
         now = _now_iso()
-        memory["metadata"] = {**memory["metadata"], "updated_at": now, "last_used": now}
-        self._memories[memory_id] = memory
-        self._save_to_disk(memory)
+        stored = {
+            **memory,
+            "id": memory_id,
+            "metadata": {**memory.get("metadata", {}), "updated_at": now, "last_used": now},
+        }
+        await db.save_agent_memory(stored)
+        return memory_id
 
-    def get_memories_for_agent(self, agent: str, limit: int = 5) -> list[dict[str, Any]]:
-        self._ensure_loaded()
-        results = [m for m in self._memories.values() if m.get("agent") == agent]
-        results.sort(
-            key=lambda m: (m["metadata"]["usage_count"], m["metadata"]["last_used"]),
-            reverse=True,
-        )
-        return results[:limit]
+    async def get_memories_for_agent(self, agent: str, limit: int = 5) -> list[dict[str, Any]]:
+        return await db.get_agent_memories(agent, limit)
 
-    def record_memory_usage(self, memory_id: str) -> None:
-        self._ensure_loaded()
-        memory = self._memories.get(memory_id)
-        if memory:
-            memory["metadata"]["usage_count"] += 1
-            memory["metadata"]["last_used"] = _now_iso()
-            self._save_to_disk(memory)
+    async def record_memory_usage(self, memory_id: str) -> None:
+        await db.record_agent_memory_usage(memory_id)
 
-    def delete_memory(self, memory_id: str) -> None:
-        self._ensure_loaded()
-        self._memories.pop(memory_id, None)
-        path = MEMORY_DIR / f"{memory_id}.json"
-        path.unlink(missing_ok=True)
+    async def delete_memory(self, memory_id: str) -> None:
+        await db.delete_agent_memory(memory_id)
 
-    def delete_memories_for_bid(self, bid_id: str) -> int:
+    async def delete_memories_for_bid(self, bid_id: str) -> int:
         """Delete all memories learned from a specific bid's analysis - used
         when a bid document is removed from history, so stale learnings from
         a deleted document stop being injected into future agent runs."""
-        self._ensure_loaded()
-        to_delete = [m for m in self._memories.values() if m["metadata"].get("source_bid_id") == bid_id]
-        for memory in to_delete:
-            self.delete_memory(memory["id"])
-        return len(to_delete)
+        return await db.delete_agent_memories_for_bid(bid_id)
 
 
 def _now_iso() -> str:
@@ -155,10 +113,18 @@ def _format_memories_as_context(memories: list[dict[str, Any]], agent: str) -> s
     return "\n".join(lines)
 
 
-def inject_memory_context(system_prompt: str, agent: str, document_text: str | None = None) -> str:
-    """Prepend relevant past-analysis learnings to a system prompt."""
+async def inject_memory_context(
+    system_prompt: str, agent: str, document_text: str | None = None
+) -> str:
+    """Prepend relevant past-analysis learnings to a system prompt. Never
+    raises - memory is an enhancement, so a DB hiccup degrades to the plain
+    prompt rather than failing the agent run."""
     manager = get_memory_manager()
-    memories = manager.get_memories_for_agent(agent, limit=10)
+    try:
+        memories = await manager.get_memories_for_agent(agent, limit=10)
+    except Exception:
+        logger.warning("Could not load %s agent memories, continuing without", agent, exc_info=True)
+        return system_prompt
 
     if document_text and memories:
         document_text_lower = document_text.lower()
@@ -168,11 +134,14 @@ def inject_memory_context(system_prompt: str, agent: str, document_text: str | N
         )
         memories = memories[:5]
 
-    for memory in memories[:3]:
-        manager.record_memory_usage(memory["id"])
-
     if not memories:
         return system_prompt
+
+    for memory in memories[:3]:
+        try:
+            await manager.record_memory_usage(memory["id"])
+        except Exception:
+            logger.warning("Could not record memory usage for %s", memory["id"], exc_info=True)
 
     context_text = _format_memories_as_context(memories, agent)
     return (
@@ -199,7 +168,9 @@ def _generate_tags(agent: str, content: str) -> list[str]:
     return tags
 
 
-def extract_and_save_memory(agent: str, response: str, bid_id: str, document_type: str) -> str:
+async def extract_and_save_memory(
+    agent: str, response: str, bid_id: str, document_type: str
+) -> str:
     """Extract a learning from an agent's raw response and persist it."""
     key_findings = _extract_key_findings(response)
     if not key_findings:
@@ -222,5 +193,4 @@ def extract_and_save_memory(agent: str, response: str, bid_id: str, document_typ
             "last_used": now,
         },
     }
-    get_memory_manager().save_memory(memory)
-    return memory["id"]
+    return await get_memory_manager().save_memory(memory)

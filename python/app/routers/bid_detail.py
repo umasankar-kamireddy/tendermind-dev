@@ -38,6 +38,6 @@ async def delete_bid(_user: CurrentUser, bid_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Bid not found")
 
-    memories_removed = get_memory_manager().delete_memories_for_bid(bid_id)
+    memories_removed = await get_memory_manager().delete_memories_for_bid(bid_id)
 
     return {"id": bid_id, "deleted": True, "memoriesRemoved": memories_removed}

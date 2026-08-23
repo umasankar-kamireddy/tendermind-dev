@@ -131,7 +131,7 @@ async def legal_agent(
 ) -> dict[str, Any]:
     resolved_provider = provider or DEFAULT_PROVIDER
     try:
-        enriched_prompt = inject_memory_context(LEGAL_AGENT_SYSTEM_PROMPT, "legal", document_text)
+        enriched_prompt = await inject_memory_context(LEGAL_AGENT_SYSTEM_PROMPT, "legal", document_text)
         enriched_prompt = await _inject_knowledge(enriched_prompt, "legal", document_text, bid_id)
         result_state = await run_deep_agent(
             system_prompt=enriched_prompt,
@@ -157,7 +157,7 @@ async def legal_agent(
                 "overall_assessment": extract_rating_line(content),
             }
         try:
-            extract_and_save_memory("legal", content, bid_id, doc_type)
+            await extract_and_save_memory("legal", content, bid_id, doc_type)
         except Exception:
             logger.warning("Failed to save legal agent memory", exc_info=True)
         result["provider_used"] = resolved_provider
@@ -185,7 +185,7 @@ async def engineering_agent(
 ) -> dict[str, Any]:
     resolved_provider = provider or DEFAULT_PROVIDER
     try:
-        enriched_prompt = inject_memory_context(ENGINEERING_AGENT_SYSTEM_PROMPT, "engineering", document_text)
+        enriched_prompt = await inject_memory_context(ENGINEERING_AGENT_SYSTEM_PROMPT, "engineering", document_text)
         enriched_prompt = await _inject_knowledge(enriched_prompt, "engineering", document_text, bid_id)
         result_state = await run_deep_agent(
             system_prompt=enriched_prompt,
@@ -213,7 +213,7 @@ async def engineering_agent(
                 "site_requirements": extract_bullet_points(content, "site"),
             }
         try:
-            extract_and_save_memory("engineering", content, bid_id, doc_type)
+            await extract_and_save_memory("engineering", content, bid_id, doc_type)
         except Exception:
             logger.warning("Failed to save engineering agent memory", exc_info=True)
         result["provider_used"] = resolved_provider
@@ -242,7 +242,7 @@ async def accounting_agent(
 ) -> dict[str, Any]:
     resolved_provider = provider or DEFAULT_PROVIDER
     try:
-        enriched_prompt = inject_memory_context(ACCOUNTING_AGENT_SYSTEM_PROMPT, "accounting", document_text)
+        enriched_prompt = await inject_memory_context(ACCOUNTING_AGENT_SYSTEM_PROMPT, "accounting", document_text)
         enriched_prompt = await _inject_knowledge(enriched_prompt, "accounting", document_text, bid_id)
         result_state = await run_deep_agent(
             system_prompt=enriched_prompt,
@@ -286,7 +286,7 @@ async def accounting_agent(
             except (TypeError, ValueError):
                 logger.warning("Failed to parse verify_counterparty tool result: %r", tool_result_raw)
         try:
-            extract_and_save_memory("accounting", content, bid_id, doc_type)
+            await extract_and_save_memory("accounting", content, bid_id, doc_type)
         except Exception:
             logger.warning("Failed to save accounting agent memory", exc_info=True)
         result["provider_used"] = resolved_provider

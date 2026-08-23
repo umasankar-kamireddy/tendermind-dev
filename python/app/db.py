@@ -158,6 +158,31 @@ async def _initialize_schema() -> None:
         )
         await conn.execute(
             """
+            CREATE TABLE IF NOT EXISTS agent_memories (
+                id TEXT PRIMARY KEY,
+                agent TEXT NOT NULL,
+                type TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source_bid_id TEXT,
+                metadata JSONB NOT NULL,
+                usage_count INTEGER NOT NULL DEFAULT 0,
+                last_used TIMESTAMP DEFAULT NOW(),
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            """
+        )
+        # get_memories_for_agent() reads by agent ordered by usage; deleting a
+        # bid sweeps its memories by source_bid_id.
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_memories_agent "
+            "ON agent_memories(agent, usage_count DESC, last_used DESC);"
+        )
+        await conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_agent_memories_bid "
+            "ON agent_memories(source_bid_id);"
+        )
+        await conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 username TEXT UNIQUE NOT NULL,
@@ -556,3 +581,96 @@ async def delete_company_context(context_id: str) -> dict[str, Any] | None:
     d["id"] = str(d["id"])
     d["created_at"] = d["created_at"].isoformat() if d.get("created_at") else None
     return d
+
+
+# ---------------------------------------------------------------------------
+# Agent memories (see app/memory.py)
+# ---------------------------------------------------------------------------
+
+
+async def save_agent_memory(memory: dict[str, Any]) -> None:
+    """Upsert one learning. `usage_count`/`last_used` live in their own
+    columns so record_agent_memory_usage() can bump them without rewriting
+    the JSON blob, but are mirrored into metadata on read for the callers
+    that expect the file-store shape."""
+    pool = _get_pool()
+    metadata = memory.get("metadata") or {}
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            INSERT INTO agent_memories
+                (id, agent, type, content, source_bid_id, metadata, usage_count, last_used)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+            ON CONFLICT (id) DO UPDATE SET
+                agent = EXCLUDED.agent,
+                type = EXCLUDED.type,
+                content = EXCLUDED.content,
+                source_bid_id = EXCLUDED.source_bid_id,
+                metadata = EXCLUDED.metadata;
+            """,
+            memory["id"],
+            memory.get("agent") or "",
+            memory.get("type") or "general",
+            memory.get("content") or "",
+            metadata.get("source_bid_id"),
+            json.dumps(metadata),
+            int(metadata.get("usage_count") or 0),
+        )
+
+
+def _row_to_memory(row: asyncpg.Record) -> dict[str, Any]:
+    metadata = row["metadata"]
+    if isinstance(metadata, str):
+        metadata = json.loads(metadata)
+    metadata = {
+        **metadata,
+        "usage_count": row["usage_count"],
+        "last_used": row["last_used"].isoformat() + "Z" if row["last_used"] else None,
+    }
+    return {
+        "id": row["id"],
+        "agent": row["agent"],
+        "type": row["type"],
+        "content": row["content"],
+        "metadata": metadata,
+    }
+
+
+async def get_agent_memories(agent: str, limit: int = 5) -> list[dict[str, Any]]:
+    pool = _get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT id, agent, type, content, metadata, usage_count, last_used
+            FROM agent_memories
+            WHERE agent = $1
+            ORDER BY usage_count DESC, last_used DESC
+            LIMIT $2;
+            """,
+            agent,
+            limit,
+        )
+    return [_row_to_memory(row) for row in rows]
+
+
+async def record_agent_memory_usage(memory_id: str) -> None:
+    pool = _get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE agent_memories SET usage_count = usage_count + 1, last_used = NOW() WHERE id = $1;",
+            memory_id,
+        )
+
+
+async def delete_agent_memory(memory_id: str) -> None:
+    pool = _get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute("DELETE FROM agent_memories WHERE id = $1;", memory_id)
+
+
+async def delete_agent_memories_for_bid(bid_id: str) -> int:
+    pool = _get_pool()
+    async with pool.acquire() as conn:
+        result = await conn.execute("DELETE FROM agent_memories WHERE source_bid_id = $1;", bid_id)
+    # asyncpg returns the command tag, e.g. "DELETE 3".
+    return int(result.split()[-1]) if result else 0
