@@ -30,6 +30,7 @@ from agents.tools import (
     verify_counterparty_tool,
 )
 from agents.tracing import agent_run_config
+from app.counterparty import extract_counterparty_name, verify_counterparty
 from app.document_sections import filter_text_for_domain
 from app.knowledge import retrieve_domain_context
 from app.memory import extract_and_save_memory, inject_memory_context
@@ -230,6 +231,40 @@ async def engineering_agent(
         }
 
 
+async def _verified_counterparty(
+    document_text: str, result_state: Any
+) -> dict[str, Any] | None:
+    """Authoritative counterparty screening for the accounting agent.
+
+    Prefers a name extracted from the document by app/counterparty.py. Falls
+    back to the agent's own `verify_counterparty` tool call only when that
+    finds nothing and the agent screened a name the document actually
+    contains - the agent can spot a client named in prose that the
+    label-based extraction misses, but it doesn't get to invent one.
+    """
+    name = extract_counterparty_name(document_text)
+    if name:
+        return await verify_counterparty(name)
+
+    tool_result_raw = last_tool_result(result_state, "verify_counterparty")
+    if not tool_result_raw:
+        return None
+    try:
+        parsed = json.loads(tool_result_raw)
+    except (TypeError, ValueError):
+        logger.warning("Failed to parse verify_counterparty tool result: %r", tool_result_raw)
+        return None
+
+    entity = str(parsed.get("entity_name") or "")
+    if entity and entity.lower() in (document_text or "").lower():
+        return parsed
+
+    logger.info(
+        "Discarding counterparty result for %r - not found verbatim in the document", entity
+    )
+    return None
+
+
 async def accounting_agent(
     document_text: str | None,
     bid_id: str,
@@ -273,18 +308,17 @@ async def accounting_agent(
                 "cash_flow_analysis": cash_flow_match.strip(),
                 "financial_risk": extract_rating_line(content, ("HIGH", "MEDIUM", "LOW")),
             }
-        # Read straight from the tool call rather than the LLM's JSON: this
-        # is what agents/risk.py's debarred-counterparty override keys off,
-        # so it must reflect what the registry lookup actually returned, not
-        # the agent's paraphrase of it. Absent (agent never identified a
-        # counterparty to check, or the tool was never called) is valid -
-        # risk.py treats missing counterparty_verification as "no signal".
-        tool_result_raw = last_tool_result(result_state, "verify_counterparty")
-        if tool_result_raw:
-            try:
-                result["counterparty_verification"] = json.loads(tool_result_raw)
-            except (TypeError, ValueError):
-                logger.warning("Failed to parse verify_counterparty tool result: %r", tool_result_raw)
+        # Screen the counterparty deterministically off the document text
+        # rather than trusting whatever the agent passed to the tool. Left to
+        # the LLM this arrived as "not specified" and as "INVITATION TO
+        # TENDER" (the document's own title) - neither matches a watchlist,
+        # so both came back "verified" and told agents/risk.py the
+        # counterparty was clean (score 0.15) when nothing had been screened.
+        # A missing name must read as "no check performed", which is what
+        # risk.py treats as no signal.
+        result["counterparty_verification"] = await _verified_counterparty(
+            document_text, result_state
+        )
         try:
             await extract_and_save_memory("accounting", content, bid_id, doc_type)
         except Exception:

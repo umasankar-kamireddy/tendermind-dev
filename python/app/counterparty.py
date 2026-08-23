@@ -83,6 +83,58 @@ def normalize_company_name(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", (name or "").lower()).strip()
 
 
+# Labels a tender uses for the entity issuing it. Ordered: an explicit
+# "Employer"/"Client" beats a vaguer "Issued by".
+_COUNTERPARTY_LABELS = [
+    "employer",
+    "client",
+    "owner",
+    "procuring entity",
+    "contracting authority",
+    "awarding authority",
+    "purchaser",
+    "issued by",
+    "tender issued by",
+    "on behalf of",
+]
+
+_LABEL_RE = re.compile(
+    r"^\s*(?:{})\s*[:\-\u2013]\s*(?P<name>[^\n]{{3,120}})".format("|".join(_COUNTERPARTY_LABELS)),
+    re.IGNORECASE | re.MULTILINE,
+)
+
+def extract_counterparty_name(document_text: str) -> str | None:
+    """Pull the issuing client/authority out of a tender's own text.
+
+    Deliberately deterministic rather than left to the agent: asking the LLM
+    to identify the counterparty and pass it to the tool produced arguments
+    like "not specified" and "INVITATION TO TENDER" (the document's title),
+    both of which match no watchlist and therefore come back "verified" -
+    certifying a counterparty that was never actually screened. A label-based
+    extraction either finds a real name or returns None, and None correctly
+    means "no check performed" rather than "clean".
+    """
+    if not document_text:
+        return None
+
+    match = _LABEL_RE.search(document_text)
+    if not match:
+        return None
+
+    name = match.group("name").strip().strip('"\'')
+
+    # Cut an address tail at the first comma - "Acme Ltd, Moscow, Russia"
+    # screens as "Acme Ltd". Names themselves don't contain commas, while
+    # the address that follows one only hurts the match score. Anything
+    # parenthetical ("(the Employer)") goes the same way.
+    name = name.split(",")[0]
+    name = re.sub(r"\s*\([^)]*\)", "", name)
+    name = name.strip(" .;:-")
+    if len(name) < 3 or normalize_company_name(name) in _PLACEHOLDER_NAMES:
+        return None
+    return name
+
+
 def _unavailable(entity_name: str, reason: str) -> dict:
     return {
         "status": "unavailable",
