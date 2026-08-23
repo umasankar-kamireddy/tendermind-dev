@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import AppShell from '@/components/AppShell';
+import { useAuth } from '@/lib/auth';
 interface ContextItem {
   id: string;
   category: string;
@@ -18,6 +19,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 const CATEGORIES = ['legal', 'engineering', 'accounting', 'risk'];
 export default function CompanyContextPage() {
+  const { token, isLoading: authLoading } = useAuth();
   const [items, setItems] = useState<ContextItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +32,9 @@ export default function CompanyContextPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fetchItems = async () => {
     try {
-      const response = await fetch('/api/company-context');
+      const response = await fetch('/api/company-context', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error('Failed to load company context');
       const data = await response.json();
       setItems(data.items || []);
@@ -41,8 +45,10 @@ export default function CompanyContextPage() {
     }
   };
   useEffect(() => {
-    fetchItems();
-  }, []);
+    // Admin endpoints are authenticated - see app/admin/page.tsx.
+    if (!authLoading) fetchItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, authLoading]);
   const resetForm = () => {
     setTitle('');
     setContent('');
@@ -74,7 +80,11 @@ export default function CompanyContextPage() {
       } else if (file) {
         formData.append('file', file);
       }
-      const response = await fetch('/api/company-context', { method: 'POST', body: formData });
+      const response = await fetch('/api/company-context', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         throw new Error(data.error || 'Failed to save company context');
@@ -94,7 +104,10 @@ export default function CompanyContextPage() {
   const handleDelete = async (item: ContextItem) => {
     if (!confirm(`Remove "${item.title}"? This can't be undone.`)) return;
     try {
-      const response = await fetch(`/api/company-context/${item.id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/company-context/${item.id}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (!response.ok) throw new Error('Failed to delete');
       setItems((prev) => prev.filter((i) => i.id !== item.id));
     } catch (err) {

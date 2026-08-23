@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import AppShell from '@/components/AppShell';
+import { useAuth } from '@/lib/auth';
 interface BoqItem {
   key: string;
   name: string;
@@ -48,15 +49,21 @@ function computeSummary(items: BoqItem[], contingencyPercentage: number): BoqSum
 }
 const CONTINGENCY_PERCENTAGE = 0.1;
 export default function AdminBoqPage() {
+  const { token, isLoading: authLoading } = useAuth();
   const [items, setItems] = useState<BoqItem[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   useEffect(() => {
+    // Admin endpoints are authenticated - fetching before the stored session
+    // is restored (or with no header at all) 401s and leaves the page blank.
+    if (authLoading) return;
     const fetchDefaults = async () => {
       try {
-        const response = await fetch('/api/admin/boq');
+        const response = await fetch('/api/admin/boq', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (!response.ok) throw new Error('Failed to load BOQ defaults');
         const data = await response.json();
         setItems(data.items);
@@ -67,7 +74,7 @@ export default function AdminBoqPage() {
       }
     };
     fetchDefaults();
-  }, []);
+  }, [token, authLoading]);
   const updateItem = (key: string, field: keyof BoqItem, value: string) => {
     setItems((prev) =>
       prev
@@ -90,7 +97,10 @@ export default function AdminBoqPage() {
     try {
       const response = await fetch('/api/admin/boq', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ items }),
       });
       if (!response.ok) throw new Error('Failed to save BOQ defaults');
