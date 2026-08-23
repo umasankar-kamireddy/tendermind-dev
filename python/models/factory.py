@@ -15,7 +15,7 @@ so they're both served by `ChatOpenAI` pointed at a different `base_url`.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Literal
 
 from langchain_core.language_models.chat_models import BaseChatModel
@@ -122,10 +122,6 @@ AVAILABLE_MODELS: dict[str, list[str]] = {
     ],
     "moonshot": ["moonshot-v1-8k", "moonshot-v1-32k", "moonshot-v1-128k"],
 }
-
-
-def list_models_for_provider(provider: str) -> list[str]:
-    return AVAILABLE_MODELS.get(provider, [])
 
 
 def get_model(

@@ -1,6 +1,5 @@
 """Unit tests for app.validation - pre-persist bid result checks."""
 
-import pytest
 from app.validation import validate_bid_result
 
 

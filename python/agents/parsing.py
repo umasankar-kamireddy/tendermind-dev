@@ -45,10 +45,3 @@ def extract_rating_line(text: str, ratings: tuple[str, ...] = ("GREEN", "YELLOW"
     if fallback:
         return fallback.group(1)
     return "Assessment completed - please review details above"
-
-
-CITATION_PATTERN = re.compile(r"\[p(?:age)?[:\s]*(\d+)(?:[,\s]+([^\]]+))?\]", re.IGNORECASE)
-
-
-def strip_citation(item: str) -> str:
-    return re.sub(r"\s*\[[^\]]*\]\s*$", "", item).strip()

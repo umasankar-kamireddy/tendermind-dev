@@ -3,8 +3,6 @@
 import os
 import time
 
-import pytest
-
 os.environ.setdefault("JWT_SECRET", "test-secret-for-unit-tests-only")
 
 from app.auth import (

@@ -104,7 +104,7 @@ async def correlation_id_middleware(request: Request, call_next):
     request.state.correlation_id = correlation_id
     try:
         response = await call_next(request)
-    except Exception as exc:
+    except Exception:
         logger.exception("Unhandled error [correlation_id=%s]", correlation_id)
         return JSONResponse(status_code=500, content={"detail": "Internal server error"}, headers={"X-Request-ID": correlation_id})
     response.headers["X-Request-ID"] = correlation_id

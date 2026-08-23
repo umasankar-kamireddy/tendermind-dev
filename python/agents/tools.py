@@ -82,14 +82,9 @@ def extract_document_text(document_id: str) -> str:
     return extract_text_from_file(data, file_name)
 
 
-# The set of tools every domain agent (legal/engineering/accounting) is
-# given, so extraction stays a shared, reusable capability rather than each
-# agent needing its own copy.
-DOCUMENT_TOOLS = [extract_document_text]
-
 
 def document_tools_for_domain(domain: str) -> list:
-    """Domain-scoped variant of DOCUMENT_TOOLS: filtering by domain
+    """Domain-scoped document-extraction tool: filtering by domain
     (app.document_sections) happens inside the tool call itself - still a
     deterministic, mechanical step, not something left to the LLM's
     judgment - so the legal agent's tool call returns only legal-relevant
