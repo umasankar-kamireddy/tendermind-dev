@@ -40,6 +40,10 @@ export default function BidsPage() {
 
   useEffect(() => {
     const fetchBids = async () => {
+      // Cleared per attempt: this effect re-runs when the token arrives, and
+      // the first (unauthenticated) attempt's 401 must not survive the
+      // successful retry - it rendered an error banner above a loaded table.
+      setError(null);
       try {
         const response = await fetch('/api/bids?limit=50', {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
