@@ -6,7 +6,7 @@ import { Btn, MarketingShell, MicroLabel } from '@/components/ui';
 
 const STAT_RAIL = [
   { value: '1,240', label: 'Tenders analyzed' },
-  { value: '£3.1bn', label: 'Contract value assessed' },
+  { value: '$3.1bn', label: 'Contract value assessed' },
   { value: '31%', label: 'Average reduction in pre-bid review time' },
 ];
 
@@ -105,7 +105,7 @@ export default function WelcomePage() {
               <div className="grid gap-px bg-line border border-line mt-6 sm:grid-cols-3">
                 <div className="bg-panel px-4 py-4">
                   <div className="text-[11px] text-ink-45">Estimated value</div>
-                  <div className="font-mono text-[22px] mt-1.5">£42.0M</div>
+                  <div className="font-mono text-[22px] mt-1.5">$42.0M</div>
                 </div>
                 <div className="bg-panel px-4 py-4">
                   <div className="text-[11px] text-ink-45">Modeled gross margin</div>
@@ -121,7 +121,7 @@ export default function WelcomePage() {
                 <p className="text-[13px] leading-[1.65] text-ink-72">
                   Three contractual provisions create material downside exposure: uncapped indirect
                   liability (Clause 17.4), a 10-day payment dispute window, and service credits
-                  reaching approximately £1.9M annually.
+                  reaching approximately $1.9M annually.
                 </p>
                 <div className="border-l-2 border-accent pl-3.5">
                   <MicroLabel>Recommendation</MicroLabel>

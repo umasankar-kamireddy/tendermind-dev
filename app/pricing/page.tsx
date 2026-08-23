@@ -5,7 +5,7 @@ import { Btn, MarketingShell, MicroLabel } from '@/components/ui';
 const PLANS = [
   {
     name: 'Team',
-    price: '£499',
+    price: '$499',
     cadence: 'per month',
     blurb: 'For a single bid team putting every opportunity through the same review.',
     cta: 'Start workspace',
@@ -21,7 +21,7 @@ const PLANS = [
   },
   {
     name: 'Business',
-    price: '£1,499',
+    price: '$1,499',
     cadence: 'per month',
     blurb: 'For contractors bidding across regions, with company memory shaping every review.',
     cta: 'Start Business',

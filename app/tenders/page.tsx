@@ -44,7 +44,7 @@ interface BidRow {
   created_at: string;
 }
 
-const gbp = (thousands: number) => `£${(thousands / 1000).toFixed(2)}M`;
+const gbp = (thousands: number) => `$${(thousands / 1000).toFixed(2)}M`;
 
 export default function TendersPage() {
   const [tab, setTab] = useState<Tab>('Overview');

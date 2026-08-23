@@ -37,7 +37,7 @@ export const DEMO_PIPELINE: DemoPipelineRow[] = [
     tender: 'Southern Region Maintenance Framework',
     client: 'Network Rail',
     closes: '19 days',
-    value: '£42.0M',
+    value: '$42.0M',
     win: '68%',
     margin: 19.8,
     risk: 'High',
@@ -48,7 +48,7 @@ export const DEMO_PIPELINE: DemoPipelineRow[] = [
     tender: 'Manchester Airport Facilities',
     client: 'MAG Group',
     closes: '27 days',
-    value: '£18.0M',
+    value: '$18.0M',
     win: '42%',
     margin: 21.4,
     risk: 'Medium',
@@ -59,7 +59,7 @@ export const DEMO_PIPELINE: DemoPipelineRow[] = [
     tender: 'TfL Electrical Maintenance',
     client: 'Transport for London',
     closes: '41 days',
-    value: '£63.0M',
+    value: '$63.0M',
     win: '71%',
     margin: 17.1,
     risk: 'Medium',
@@ -70,7 +70,7 @@ export const DEMO_PIPELINE: DemoPipelineRow[] = [
     tender: 'NHS Estates Framework Lot 3',
     client: 'NHS SBS',
     closes: '52 days',
-    value: '£11.8M',
+    value: '$11.8M',
     win: '34%',
     margin: 23.2,
     risk: 'Low',
@@ -81,7 +81,7 @@ export const DEMO_PIPELINE: DemoPipelineRow[] = [
     tender: 'Dublin Port Civils Package B',
     client: 'Dublin Port Co.',
     closes: '9 days',
-    value: '£8.4M',
+    value: '$8.4M',
     win: '22%',
     margin: 12.6,
     risk: 'High',
@@ -92,7 +92,7 @@ export const DEMO_PIPELINE: DemoPipelineRow[] = [
     tender: 'ScotRail Depot Upgrade',
     client: 'ScotRail',
     closes: '64 days',
-    value: '£15.4M',
+    value: '$15.4M',
     win: '55%',
     margin: 20.1,
     risk: 'Medium',
@@ -152,17 +152,17 @@ export const DEMO_PROFILE_FACTS: DemoFact[] = [
   },
   {
     label: 'Maximum project capacity',
-    value: '£28M concurrent contract value',
+    value: '$28M concurrent contract value',
     sources: 'Verified from 2 sources',
     docs: [
       {
         name: 'Resource_Model_FY26.xlsx',
-        quote: 'Peak concurrent delivery capacity modeled at £28.4M.',
+        quote: 'Peak concurrent delivery capacity modeled at $28.4M.',
         loc: 'tab: Capacity',
       },
       {
         name: 'Bonding_Facility_Letter.pdf',
-        quote: 'Surety facility limit £30M aggregate.',
+        quote: 'Surety facility limit $30M aggregate.',
         loc: 'p. 1',
       },
     ],
@@ -199,7 +199,7 @@ export const DEMO_COMMERCIAL_RULES: Array<[string, string, string]> = [
   ['Maximum acceptable payment terms', '60 days', 'Standard Terms §4.2'],
   ['Standard mobilization allowance', '4–6% contract value', 'Bid Pricing Manual'],
   ['Default contingency rate', '7.5%', 'Risk Policy 2026'],
-  ['Legal review required when liability exceeds', '£10M', 'Delegated Authority Matrix'],
+  ['Legal review required when liability exceeds', '$10M', 'Delegated Authority Matrix'],
 ];
 
 export const DEMO_MEMORY_COVERAGE: Array<{ domain: string; pct: number }> = [
@@ -385,9 +385,9 @@ export const DEMO_INTEGRATIONS: Array<{
 ];
 
 export const DEMO_APPROVAL_RULES: Array<{ rule: string; owner: string }> = [
-  { rule: 'Liability exposure above £10M', owner: 'General Counsel — Rachel Coombes' },
+  { rule: 'Liability exposure above $10M', owner: 'General Counsel — Rachel Coombes' },
   { rule: 'Modeled gross margin below 18%', owner: 'Commercial Director + Finance' },
-  { rule: 'Contract value above £25M', owner: 'Board sub-committee' },
+  { rule: 'Contract value above $25M', owner: 'Board sub-committee' },
   { rule: 'Payment terms beyond 60 days', owner: 'Finance Manager — James Patel' },
 ];
 
@@ -450,9 +450,9 @@ export interface DemoRequirement {
 export const DEMO_REQUIREMENTS: DemoRequirement[] = [
   {
     ref: 'SQ 3.1',
-    requirement: 'Minimum annual turnover £60M for the last two financial years',
+    requirement: 'Minimum annual turnover $60M for the last two financial years',
     status: 'Meets',
-    evidence: 'Statutory accounts FY24/FY25 — £78.4M, £81.2M',
+    evidence: 'Statutory accounts FY24/FY25 — $78.4M, $81.2M',
   },
   {
     ref: 'SQ 4.2',
@@ -468,9 +468,9 @@ export const DEMO_REQUIREMENTS: DemoRequirement[] = [
   },
   {
     ref: 'SQ 6.1',
-    requirement: 'Two comparable rail framework references above £30M',
+    requirement: 'Two comparable rail framework references above $30M',
     status: 'Meets',
-    evidence: 'Anglia Framework (£38M), Western Route (£33M)',
+    evidence: 'Anglia Framework ($38M), Western Route ($33M)',
   },
   {
     ref: 'SQ 7.3',
@@ -499,14 +499,14 @@ export const DEMO_COMMENTS: Array<{
     name: 'Sarah Mitchell',
     role: 'Commercial Director',
     time: '21 Aug 09:14',
-    body: '£46.8M probably won’t survive first-round pricing. Can we see the margin at £44M?',
+    body: '$46.8M probably won’t survive first-round pricing. Can we see the margin at $44M?',
   },
   {
     initials: 'JP',
     name: 'James Patel',
     role: 'Finance',
     time: '21 Aug 09:41',
-    body: 'At £44M we’re around 14.7% under the current risk assumptions — and that assumes Schedule 8 credits stay below 20% probability.',
+    body: 'At $44M we’re around 14.7% under the current risk assumptions — and that assumes Schedule 8 credits stay below 20% probability.',
   },
   {
     initials: 'TM',
@@ -523,7 +523,7 @@ export const DEMO_TENDER = {
   reference: 'NR/SRM/2026/042',
   title: 'Southern Region Maintenance Framework',
   deadline: '17 Sep 2026 · 12:00 BST',
-  value: '£42.0M',
+  value: '$42.0M',
   term: '5 years, 2 optional extensions',
   margin: '19.8%',
   marginThreshold: '18%',
@@ -533,7 +533,7 @@ export const DEMO_TENDER = {
   confidence: '84%',
   conditions: 5,
   assessment:
-    'Three contractual provisions create material downside exposure: uncapped indirect liability (Clause 17.4), a 10-day payment dispute window, and service credits reaching approximately £1.9M annually. The technical scope sits comfortably within demonstrated capability, and the programme is achievable with the current resource model.',
+    'Three contractual provisions create material downside exposure: uncapped indirect liability (Clause 17.4), a 10-day payment dispute window, and service credits reaching approximately $1.9M annually. The technical scope sits comfortably within demonstrated capability, and the programme is achievable with the current resource model.',
   documents: [
     { name: 'NR_Southern_Framework_RFP_2026.pdf', pages: '612 pp' },
     { name: 'Terms_and_Conditions.pdf', pages: '84 pp' },
@@ -544,11 +544,11 @@ export const DEMO_TENDER = {
 };
 
 /**
- * Baseline cost model behind the Commercial tab's scenario sliders (£000s).
+ * Baseline cost model behind the Commercial tab's scenario sliders ($000s).
  *
  * Calibrated so that at the default lever positions (4.2% labour inflation,
  * 3.5% material inflation, 7.5% contingency) the modelled cost against the
- * £42.0M bid lands on the 19.8% gross margin quoted on the Overview tab —
+ * $42.0M bid lands on the 19.8% gross margin quoted on the Overview tab —
  * the two views read from the same numbers, so they must not disagree.
  */
 export const DEMO_COST_BASE = {
